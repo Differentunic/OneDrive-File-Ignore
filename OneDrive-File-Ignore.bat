@@ -1,5 +1,11 @@
 @echo off
 
+setlocal
+call :setESC
+cls
+
+set GitHub-Repo-Url=https://github.com/Differentunic/OneDrive-File-Ignore
+
 REM This program will create a new loacl policy that prevents OneDrive from uploading folder names, and file extentions that are defined in the OneDrive.ignore file.
 
 REM OneDrive Policy template loaction:
@@ -13,69 +19,32 @@ DISM.exe /Online /add-capability /CapabilityName:Rsat.GroupPolicy.Management.Too
 
 REM OneDrive path
 set OneDrive-Path=%localappdata%\Microsoft\OneDrive
+if exist %OneDrive-Path%\ (
+    echo %ESC%[92mOneDrive Installation Found.%ESC%[0m
+    echo.
+) else (
+    echo %ESC%[91mOneDrive Installation Not Found.%ESC%[0m
+    echo.
+    echo Is OneDrive installed?
+    echo Please check the OneDrive install directory: %OneDrive-Path%
+    echo.
+    echo If you believe that something is wrong with this tool, please open an issue on GitHub.
+    echo %ESC%[36m%ESC%[4m%GitHub-Repo-Url%%ESC%[0m%ESC%[0m
+    pause
+    REM exit 3
+    goto :eof
+)
 
-REM OneDrive Executable Path (double slash for wmic)
-set OneDrive-wmic-Path=%OneDrive-Path%\Onedrive.exe
-set OneDrive-wmic-Path=%OneDrive-wmic-Path:\=\\%
-echo %OneDrive-wmic-Path%
-
-echo OneDrive-Path=%OneDrive-Path%
-set OneDrive-Version=0
-
-REM Get the output of wmic and assign it to a variable
-for /f %%a in ('wmic datafile where "name="%OneDrive-wmic-Path%"" get Version /value ^| find "="') do set OneDrive-Version=%%a
-
-REM Remove the 'Version=' string from the variable
-set OneDrive-Version=%OneDrive-Version:~8%
-set OneDrive-Version-Temp=%OneDrive-Version:~11%
-set OneDrive-Version-Full=%OneDrive-Version:~0,11%
-
-
-REM calculate length to determine how many zero characters need to be added
-call :strlen result OneDrive-Version-Temp
-echo %result%
-
-set /a Padding = 4 - %result%
-echo %Padding%
-
-REM Add zero padding (if applicable)
-set loop=0
-:loop
-set OneDrive-Version-Full=%OneDrive-Version-Full%0
-set /a loop=%loop%+1
-if "%loop%"=="%padding%" goto next
-goto loop
-
-:next
-REM Bring original number back into the full version number
-set OneDrive-Version-Full=%OneDrive-Version-Full%%OneDrive-Version-Temp%
+echo You can find your OneDrive Version
+set /P OneDrive-Version-Full=OneDrive Version Number: || Set OneDrive-Version-Full=Null
+If "%OneDrive-Version-Full%"=="Null" goto sub_error
 echo OneDrive-Version-Full=%OneDrive-Version-Full%
 
-dir %OneDrive-Path% /b REM | find /i "%OneDrive-Version-Full%"
+REM dir %OneDrive-Path% /b | find /i "%OneDrive-Version-Full%"
 
-
-REM Go to end of file so that the function does not run when not called.
-goto :eof
-
-:strlen <resultVar> <stringVar>
-(
-    setlocal EnableDelayedExpansion
-    (set^ tmp=!%~2!)
-    if defined tmp (
-        set "len=1"
-        for %%P in (4096 2048 1024 512 256 128 64 32 16 8 4 2 1) do (
-            if "!tmp:~%%P,1!" NEQ "" (
-                set /a "len+=%%P"
-                set "tmp=!tmp:~%%P!"
-            )
-        )
-    ) ELSE (
-        set len=0
-    )
+:setESC
+for /F "tokens=1,2 delims=#" %%a in ('"prompt #$H#$E# & echo on & for %%b in (1) do rem"') do (
+  set ESC=%%b
+  exit /B 0
 )
-(
-    endlocal
-    set "%~1=%len%"
-    exit /b
-)
-
+exit /B 0
